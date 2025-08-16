@@ -1,0 +1,1 @@
+ALTER TABLE `total-recall-hack_context` ADD `extractedContent` text;
