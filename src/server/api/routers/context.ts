@@ -1,9 +1,7 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { contexts } from "~/server/db/schema";
 import { getWebpageContent, ExaError } from "~/lib/exa";
 
 // Helper function to validate XOR logic for url/text
@@ -56,22 +54,14 @@ export const contextRouter = createTRPCRouter({
         }
       }
       
-      const [createdContext] = await ctx.db
-        .insert(contexts)
-        .values({
+      const createdContext = await ctx.db.context.create({
+        data: {
           name: input.name,
           url: input.url ?? null,
           text: input.text ?? null,
           extractedContent,
-        })
-        .returning();
-      
-      if (!createdContext) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to create context",
-        });
-      }
+        },
+      });
       
       return createdContext;
     }),
@@ -89,8 +79,8 @@ export const contextRouter = createTRPCRouter({
       validateUrlOrText(input.url, input.text);
       
       // Check if context exists first
-      const existingContext = await ctx.db.query.contexts.findFirst({
-        where: eq(contexts.id, input.id),
+      const existingContext = await ctx.db.context.findUnique({
+        where: { id: input.id },
       });
       
       if (!existingContext) {
@@ -120,26 +110,15 @@ export const contextRouter = createTRPCRouter({
         }
       }
       
-      const updateValues = {
-        name: input.name,
-        url: hasUrl ? input.url : null,
-        text: hasUrl ? null : (input.text ?? null),
-        extractedContent,
-        updatedAt: new Date(),
-      };
-      
-      const [updatedContext] = await ctx.db
-        .update(contexts)
-        .set(updateValues)
-        .where(eq(contexts.id, input.id))
-        .returning();
-      
-      if (!updatedContext) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to update context",
-        });
-      }
+      const updatedContext = await ctx.db.context.update({
+        where: { id: input.id },
+        data: {
+          name: input.name,
+          url: hasUrl ? input.url : null,
+          text: hasUrl ? null : (input.text ?? null),
+          extractedContent,
+        },
+      });
       
       return updatedContext;
     }),
@@ -151,8 +130,8 @@ export const contextRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const context = await ctx.db.query.contexts.findFirst({
-        where: eq(contexts.id, input.id),
+      const context = await ctx.db.context.findUnique({
+        where: { id: input.id },
       });
       
       if (!context) {
@@ -166,8 +145,8 @@ export const contextRouter = createTRPCRouter({
     }),
 
   list: publicProcedure.query(async ({ ctx }) => {
-    const allContexts = await ctx.db.query.contexts.findMany({
-      orderBy: (contexts, { desc }) => [desc(contexts.createdAt)],
+    const allContexts = await ctx.db.context.findMany({
+      orderBy: { createdAt: "desc" },
     });
     
     return allContexts;
@@ -181,8 +160,8 @@ export const contextRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Check if context exists first
-      const existingContext = await ctx.db.query.contexts.findFirst({
-        where: eq(contexts.id, input.id),
+      const existingContext = await ctx.db.context.findUnique({
+        where: { id: input.id },
       });
       
       if (!existingContext) {
@@ -192,17 +171,9 @@ export const contextRouter = createTRPCRouter({
         });
       }
       
-      const [deletedContext] = await ctx.db
-        .delete(contexts)
-        .where(eq(contexts.id, input.id))
-        .returning();
-      
-      if (!deletedContext) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to delete context",
-        });
-      }
+      const deletedContext = await ctx.db.context.delete({
+        where: { id: input.id },
+      });
       
       return deletedContext;
     }),

@@ -18,3 +18,15 @@ model Post {
 
     @@index([name])
 }
+
+model Context {
+    id               Int       @id @default(autoincrement())
+    name             String    @db.VarChar(256)
+    url              String?
+    text             String?
+    extractedContent String?
+    createdAt        DateTime  @default(now())
+    updatedAt        DateTime  @updatedAt
+
+    @@index([name])
+}
