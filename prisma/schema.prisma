@@ -2,19 +2,68 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+model Card {
+  id          Int     @id @default(autoincrement())
+  name        String
+  userContext String?
 
-    @@index([name])
+  repetitionNumber Int   @default(0)
+  easeFactor       Float @default(2.5)
+  interval         Int   @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sources  Source[]
+  sessions Session[]
+}
+
+model Source {
+  id               Int     @id @default(autoincrement())
+  url              String?
+  text             String?
+  extractedContent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cardId Int
+  card   Card @relation(fields: [cardId], references: [id])
+}
+
+model Session {
+  id Int @id @default(autoincrement())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cardId  Int
+  card    Card    @relation(fields: [cardId], references: [id])
+  entries Entry[]
+}
+
+model Entry {
+  id      Int    @id @default(autoincrement())
+  author  Author
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessionId Int
+  session   Session @relation(fields: [sessionId], references: [id])
+}
+
+enum Author {
+  USER
+  AGENT
+  SYSTEM
 }
