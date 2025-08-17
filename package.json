@@ -24,6 +24,7 @@
     "mcp:start": "node dist/mcp/server.js"
   },
   "dependencies": {
+    "lightningcss": "^1.29.0",
     "@ai-sdk/google": "^2.0.6",
     "@ai-sdk/openai": "^2.0.15",
     "@modelcontextprotocol/sdk": "^1.17.3",
@@ -45,6 +46,10 @@
     "superjson": "^2.2.1",
     "ts-fsrs": "^5.2.2",
     "zod": "^3.24.2"
+  },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.0.14",
+    "lightningcss-linux-x64-gnu": "^1.29"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
