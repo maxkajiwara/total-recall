@@ -1,0 +1,425 @@
+{
+	"info": {
+		"_postman_id": "e81ec4c8-c590-4796-b156-68ceb433b12f",
+		"name": "T3 App API Collection",
+		"description": "Collection for testing T3 app Context and EXA APIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "27817135"
+	},
+	"item": [
+		{
+			"name": "Context API",
+			"item": [
+				{
+					"name": "Create Context with URL",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"json\":{\n  \"name\": \"Want to learn the Binary Search algorithm\",\n  \"url\": \"https://www.geeksforgeeks.org/dsa/binary-search/\"\n}}\n"
+						},
+						"url": "{{baseUrl}}/context.create"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Context with Text",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"json\":{\n  \"name\": \"My Text Context\",\n  \"text\": \"This is some text content\"\n}}"
+						},
+						"url": "{{baseUrl}}/context.create"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Context with URL",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"json\":{\n  \"id\": 1,\n  \"name\": \"Updated Context\",\n  \"url\": \"https://newurl.com\"\n}}"
+						},
+						"url": "{{baseUrl}}/context.update"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Context with Text",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"json\": {\n        \"id\": 1,\n        \"name\": \"Updated Text Context\",\n        \"text\": \"Updated text content\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{baseUrl}}/context.update"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Context by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/context.get?input={\"id\":1}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"context.get"
+							],
+							"query": [
+								{
+									"key": "input",
+									"value": "{\"id\":1}",
+									"description": "Context ID to retrieve"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List All Contexts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/context.list"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Context",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"json\":{\n  \"id\": 1\n}}"
+						},
+						"url": "{{baseUrl}}/context.delete"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Question API",
+			"item": [
+				{
+					"name": "Create Question",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"json\":{\n  \"contextId\": 1,\n  \"question\": \"What is Binary Search?\",\n  \"answer\": \"A searching algorithm that operates on sorted data by repeatedly dividing the search space in half\"\n}}"
+						},
+						"url": "{{baseUrl}}/question.create"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Question",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"json\":{\n  \"id\": 1,\n  \"question\": \"Updated question text?\",\n  \"answer\": \"Updated answer text\"\n}}"
+						},
+						"url": "{{baseUrl}}/question.update"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Question by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/question.get?input={\"json\":{\"id\":1}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"question.get"
+							],
+							"query": [
+								{
+									"key": "input",
+									"value": "{\"json\":{\"id\":1}}",
+									"description": "Question ID to retrieve"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List All Questions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/question.list?input={\"json\":{}}"
+					},
+					"response": []
+				},
+				{
+					"name": "List Questions by Context",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/question.listByContext?input={\"json\":{\"contextId\":1}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"question.listByContext"
+							],
+							"query": [
+								{
+									"key": "input",
+									"value": "{\"json\":{\"contextId\":1}}",
+									"description": "Context ID to filter questions"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Question",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"json\":{\n  \"id\": 1\n}}"
+						},
+						"url": "{{baseUrl}}/question.delete"
+					},
+					"response": []
+				},
+				{
+					"name": "Review Question (FSRS)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"json\":{\n  \"id\": 1,\n  \"rating\": 3\n}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{baseUrl}}/question.review",
+						"description": "Review a question with FSRS rating. Rating: 1=Again, 2=Hard, 3=Good, 4=Easy"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Scheduling Options",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/question.getScheduling?input={\"json\":{\"id\":1}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"question.getScheduling"
+							],
+							"query": [
+								{
+									"key": "input",
+									"value": "{\"json\":{\"id\":1}}",
+									"description": "Question ID to get scheduling options for"
+								}
+							]
+						},
+						"description": "Get FSRS scheduling options showing when the card would be due for each rating"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Due Questions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/question.getDue?input={\"json\":{}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"question.getDue"
+							],
+							"query": [
+								{
+									"key": "input",
+									"value": "{\"json\":{}}",
+									"description": "Optional: {\"contextId\":1,\"limit\":20}"
+								}
+							]
+						},
+						"description": "Get questions that are due for review today or overdue"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Due Questions by Context",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/question.getDue?input={\"json\":{\"contextId\":1,\"limit\":10}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"question.getDue"
+							],
+							"query": [
+								{
+									"key": "input",
+									"value": "{\"json\":{\"contextId\":1,\"limit\":10}}",
+									"description": "Get due questions for specific context with limit"
+								}
+							]
+						},
+						"description": "Get questions due for review filtered by context"
+					},
+					"response": []
+				},
+				{
+					"name": "Evaluate Voice Answer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"json\":{\n  \"questionId\": 1,\n  \"audioData\": \"base64_encoded_audio_data_here\"\n}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{baseUrl}}/question.evaluateAnswer",
+						"description": "Evaluate voice answer: transcribe audio with Whisper, evaluate with Gemini, update FSRS, and return feedback"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "EXA API",
+			"item": [
+				{
+					"name": "Exa fetch",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"description": "{  \n\"command\": \"npm\",  \n\"args\": \\[\"run\", \"mcp:dev\"\\],  \n\"cwd\": \"/Users/vsriram/code/total-recall-hack\"  \n}"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3001/api/trpc"
+		}
+	]
+}

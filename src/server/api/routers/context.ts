@@ -3,6 +3,8 @@ import { TRPCError } from "@trpc/server";
 
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { getWebpageContent, ExaError } from "~/lib/exa";
+import { generateQuestions } from "~/lib/ai";
+import { getDefaultFSRSValues } from "~/lib/fsrs";
 
 // Helper function to validate XOR logic for url/text
 const validateUrlOrText = (url?: string | null, text?: string | null) => {
@@ -26,6 +28,12 @@ const validateUrlOrText = (url?: string | null, text?: string | null) => {
 
 export const contextRouter = createTRPCRouter({
   create: publicProcedure
+    .meta({ 
+      openapi: { 
+        enabled: true, 
+        description: "Create a new context with either URL or text content" 
+      } 
+    })
     .input(
       z.object({
         name: z.string().min(1, "Name is required").max(256, "Name too long"),
@@ -59,14 +67,44 @@ export const contextRouter = createTRPCRouter({
           name: input.name,
           url: input.url ?? null,
           text: input.text ?? null,
-          extractedContent,
+          extractedContent: extractedContent ?? input.text,
         },
       });
+      
+      // Generate questions if we have content
+      const contentForQuestions = extractedContent ?? input.text;
+      if (contentForQuestions && process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+        try {
+          console.log('Generating questions for new context...');
+          const flashcards = await generateQuestions(contentForQuestions);
+          
+          if (flashcards.length > 0) {
+            await ctx.db.question.createMany({
+              data: flashcards.map(fc => ({
+                contextId: createdContext.id,
+                question: fc.question,
+                answer: fc.answer,
+                ...getDefaultFSRSValues(),
+              })),
+            });
+            console.log(`Generated ${flashcards.length} questions for context ${createdContext.id}`);
+          }
+        } catch (error) {
+          console.error('Failed to generate questions:', error);
+          // Don't fail the context creation if question generation fails
+        }
+      }
       
       return createdContext;
     }),
 
   update: publicProcedure
+    .meta({ 
+      openapi: { 
+        enabled: true, 
+        description: "Update an existing context" 
+      } 
+    })
     .input(
       z.object({
         id: z.number().int().positive("ID must be a positive integer"),
@@ -116,14 +154,51 @@ export const contextRouter = createTRPCRouter({
           name: input.name,
           url: hasUrl ? input.url : null,
           text: hasUrl ? null : (input.text ?? null),
-          extractedContent,
+          extractedContent: extractedContent ?? (hasUrl ? null : input.text),
         },
       });
+      
+      // Regenerate questions if we have content
+      const contentForQuestions = extractedContent ?? (hasUrl ? null : input.text);
+      if (contentForQuestions && process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+        try {
+          console.log('Regenerating questions for updated context...');
+          
+          // Delete existing questions
+          await ctx.db.question.deleteMany({
+            where: { contextId: input.id },
+          });
+          
+          // Generate new questions
+          const flashcards = await generateQuestions(contentForQuestions);
+          
+          if (flashcards.length > 0) {
+            await ctx.db.question.createMany({
+              data: flashcards.map(fc => ({
+                contextId: input.id,
+                question: fc.question,
+                answer: fc.answer,
+                ...getDefaultFSRSValues(),
+              })),
+            });
+            console.log(`Regenerated ${flashcards.length} questions for context ${input.id}`);
+          }
+        } catch (error) {
+          console.error('Failed to regenerate questions:', error);
+          // Don't fail the context update if question generation fails
+        }
+      }
       
       return updatedContext;
     }),
 
   get: publicProcedure
+    .meta({ 
+      openapi: { 
+        enabled: true, 
+        description: "Get a context by ID" 
+      } 
+    })
     .input(
       z.object({
         id: z.number().int().positive("ID must be a positive integer"),
@@ -144,7 +219,14 @@ export const contextRouter = createTRPCRouter({
       return context;
     }),
 
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: publicProcedure
+    .meta({ 
+      openapi: { 
+        enabled: true, 
+        description: "List all contexts" 
+      } 
+    })
+    .query(async ({ ctx }) => {
     const allContexts = await ctx.db.context.findMany({
       orderBy: { createdAt: "desc" },
     });
@@ -153,6 +235,12 @@ export const contextRouter = createTRPCRouter({
   }),
 
   delete: publicProcedure
+    .meta({ 
+      openapi: { 
+        enabled: true, 
+        description: "Delete a context by ID" 
+      } 
+    })
     .input(
       z.object({
         id: z.number().int().positive("ID must be a positive integer"),

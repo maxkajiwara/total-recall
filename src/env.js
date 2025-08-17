@@ -12,6 +12,8 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     EXA_API_KEY: z.string().min(1, "EXA_API_KEY is required"),
+    GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
+    OPENAI_API_KEY: z.string().optional(),
   },
 
   /**
@@ -31,6 +33,8 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     EXA_API_KEY: process.env.EXA_API_KEY,
+    GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**

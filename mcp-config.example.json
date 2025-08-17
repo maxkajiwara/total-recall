@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "total-recall": {
+      "command": "npm",
+      "args": ["run", "mcp:dev"],
+      "cwd": "/Users/vsriram/code/total-recall-hack",
+      "env": {
+        "DATABASE_URL": "postgresql://your_username:your_password@localhost:5432/total_recall_hack"
+      }
+    }
+  }
+}

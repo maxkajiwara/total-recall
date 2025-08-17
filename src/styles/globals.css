@@ -3,4 +3,84 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Design System Colors */
+  --color-background: #fafaf8; /* Warm off-white background */
+  --color-foreground: #2d2d2d; /* Soft black text */
+  --color-card: #ffffff; /* Pure white for cards */
+  --color-card-foreground: #2d2d2d; /* Card text */
+  --color-primary: #d97757; /* Soft terracotta - accent */
+  --color-primary-foreground: #ffffff; /* White text on primary */
+  --color-muted: #f5f5f3; /* Light muted background */
+  --color-muted-foreground: #6b6b6b; /* Muted gray text */
+  --color-border: #e5e5e2; /* Light warm gray borders */
+  --color-success: #589b7c; /* Muted green */
+  --color-orange-500: #f97316; /* Orange for progress bars */
+  --color-green-500: #10b981; /* Green for success items */
+  --color-purple-500: #8b5cf6; /* Purple for knowledge items */
+  --color-gray-300: #d1d5db; /* Light gray for inactive dots */
+
+  /* Semantic color mappings for components */
+  --color-accent: #d97757; /* Primary accent color */
+  --color-secondary: #6b6b6b; /* Secondary text */
+  --color-surface: #ffffff; /* Surface/card background */
+  --color-subtle: #e5e5e2; /* Subtle borders */
+  --color-recording: #d97757; /* Recording state color */
+
+  /* Shadow definitions */
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-elevated: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+  /* Typography Sizes */
+  --font-size-small: 14px;
+  --font-size-body: 16px;
+  --font-size-title: 20px;
+  --font-size-header: 24px;
+  
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  
+  /* Line Heights */
+  --line-height-body: 1.5;
+  --line-height-tight: 1.25;
+  
+  /* Letter Spacing */
+  --letter-spacing-header: -0.01em;
+}
+
+/* Global Styles */
+html {
+  background-color: var(--color-background);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-foreground);
+  line-height: var(--line-height-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Classes */
+.text-small {
+  font-size: var(--font-size-small);
+}
+
+.text-body {
+  font-size: var(--font-size-body);
+}
+
+.text-title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+}
+
+.text-header {
+  font-size: var(--font-size-header);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-header);
 }

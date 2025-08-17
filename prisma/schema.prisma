@@ -20,13 +20,41 @@ model Post {
 }
 
 model Context {
-    id               Int       @id @default(autoincrement())
-    name             String    @db.VarChar(256)
+    id               Int        @id @default(autoincrement())
+    name             String     @db.VarChar(256)
     url              String?
     text             String?
     extractedContent String?
-    createdAt        DateTime  @default(now())
-    updatedAt        DateTime  @updatedAt
+    createdAt        DateTime   @default(now())
+    updatedAt        DateTime   @updatedAt
+    questions        Question[]
 
     @@index([name])
+}
+
+model Question {
+    id             Int      @id @default(autoincrement())
+    contextId      Int
+    question       String
+    answer         String
+    
+    // FSRS Card State Fields
+    due            DateTime @default(now())        // When card is due for review
+    stability      Float    @default(4.0)          // Memory stability (default ~4 days)
+    difficulty     Float    @default(5.0)          // Card difficulty (1-10, 5 is neutral)
+    elapsedDays    Int      @default(0)            // Days since last review
+    scheduledDays  Int      @default(0)            // Days until next review
+    learningSteps  Int      @default(0)            // Current step in learning phase
+    reps           Int      @default(0)            // Number of repetitions
+    lapses         Int      @default(0)            // Number of failures
+    state          Int      @default(0)            // 0=New, 1=Learning, 2=Review, 3=Relearning
+    lastReview     DateTime?                       // Last review date (nullable)
+    
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+    
+    context        Context  @relation(fields: [contextId], references: [id], onDelete: Cascade)
+
+    @@index([contextId])
+    @@index([due])  // Add index for efficient querying of due cards
 }
