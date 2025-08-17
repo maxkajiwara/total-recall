@@ -95,6 +95,68 @@ npm run typecheck    # Type checking
 npm run db:studio    # Open Prisma Studio
 ```
 
+## Deployment to Vercel
+
+### Prerequisites
+1. A Vercel account ([vercel.com](https://vercel.com))
+2. A production PostgreSQL database (Vercel Postgres, Supabase, Neon, etc.)
+3. API keys for EXA and Google Gemini (optional)
+
+### Deployment Steps
+
+1. **Install Vercel CLI**
+   ```bash
+   npm i -g vercel
+   ```
+
+2. **Login to Vercel**
+   ```bash
+   vercel login
+   ```
+
+3. **Deploy to Vercel**
+   ```bash
+   vercel --prod
+   ```
+
+4. **Set Environment Variables**
+   After deployment, go to your [Vercel Dashboard](https://vercel.com) and add these environment variables:
+   ```
+   DATABASE_URL=your_production_postgresql_url
+   EXA_API_KEY=your_exa_api_key
+   GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key (optional)
+   ```
+
+5. **Run Database Migrations** (if using a new database)
+   ```bash
+   # Set your production database URL temporarily
+   export DATABASE_URL="your_production_postgresql_url"
+   
+   # Run migrations
+   npx prisma migrate deploy
+   # Or push schema directly
+   npx prisma db push
+   ```
+
+6. **Redeploy with Environment Variables**
+   ```bash
+   vercel --prod
+   ```
+
+### Important Notes for Deployment
+
+- **Tailwind CSS v4 Compatibility**: The project includes configuration to handle Tailwind v4's native dependencies on Vercel
+- **Database**: Ensure your production database URL uses SSL (`?sslmode=require`)
+- **Environment Variables**: Never commit `.env` files with real keys to version control
+- **Build Configuration**: The `vercel.json` file is pre-configured with the correct build settings
+
+### Recommended Database Providers
+
+- **Vercel Postgres**: Integrated with Vercel dashboard, automatic SSL
+- **Supabase**: Free tier available, good for prototypes
+- **Neon**: Free tier with generous limits, serverless PostgreSQL
+- **Railway**: Simple deployment, good for small projects
+
 ## MCP Server Configuration
 
 For AI assistants like Claude Desktop:
