@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 
 // Initialize Google Gemini model
-const model = google("gemini-2.0-flash");
+const model = google("gemini-2.5-pro");
 
 interface Flashcard {
   question: string;
