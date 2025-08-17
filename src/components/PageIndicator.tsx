@@ -16,25 +16,28 @@ export function PageIndicator({
 }: PageIndicatorProps) {
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-3 py-2 rounded-full shadow-lg">
         {screens.map((screen, index) => (
           <button
             key={screen}
             onClick={() => onScreenSelect(screen)}
-            className="p-1"
+            className="p-1 transition-transform hover:scale-110"
             aria-label={`Go to page ${index + 1}`}
           >
             <motion.div
-              className={`w-2 h-2 rounded-full transition-colors duration-200 ${
-                index === currentScreenIndex
-                  ? "bg-orange-500"
-                  : "bg-gray-300"
-              }`}
+              className="w-2 h-2 rounded-full"
               initial={false}
               animate={{
-                scale: index === currentScreenIndex ? 1.2 : 1,
+                scale: index === currentScreenIndex ? 1.3 : 1,
+                backgroundColor: index === currentScreenIndex ? "#d97757" : "#d1d5db",
               }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+              transition={{ 
+                duration: 0.3, 
+                ease: "easeInOut",
+                type: "spring",
+                stiffness: 500,
+                damping: 30
+              }}
             />
           </button>
         ))}

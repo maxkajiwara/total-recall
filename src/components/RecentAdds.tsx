@@ -1,9 +1,51 @@
 "use client";
 
 import { api } from "~/trpc/react";
+import { Trash2 } from "lucide-react";
+import { useState } from "react";
 
 export function RecentAdds() {
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  
   const { data: contexts, isLoading, error } = api.context.list.useQuery();
+  const utils = api.useUtils();
+  
+  const deleteContext = api.context.delete.useMutation({
+    onMutate: async ({ id }) => {
+      setDeletingId(id);
+      // Optimistic update
+      await utils.context.list.cancel();
+      const previousData = utils.context.list.getData();
+      
+      utils.context.list.setData(undefined, (old) => 
+        old?.filter(context => context.id !== id)
+      );
+      
+      return { previousData };
+    },
+    onError: (err, { id }, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        utils.context.list.setData(undefined, context.previousData);
+      }
+      setDeletingId(null);
+      alert('Failed to delete content. Please try again.');
+    },
+    onSuccess: () => {
+      utils.context.list.invalidate();
+      utils.question.list.invalidate();
+      utils.question.getDue.invalidate();
+    },
+    onSettled: () => {
+      setDeletingId(null);
+    },
+  });
+  
+  const handleDelete = async (id: number, name: string) => {
+    if (confirm(`Are you sure you want to delete "${name}" and all its flashcards?`)) {
+      deleteContext.mutate({ id });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -107,7 +149,7 @@ export function RecentAdds() {
       {recentContexts.map((context) => (
         <div
           key={context.id}
-          className="bg-white rounded-xl p-4 border border-border hover:shadow-md transition-all cursor-pointer"
+          className="bg-white rounded-xl p-4 border border-border hover:shadow-md transition-all group relative"
         >
           <div className="flex items-start space-x-3">
             <div className="text-2xl flex-shrink-0">
@@ -123,10 +165,25 @@ export function RecentAdds() {
                     {getContentPreview(context)}
                   </p>
                 </div>
-                <div className="flex-shrink-0 ml-2">
+                <div className="flex items-center space-x-2">
                   <p className="text-xs text-muted-foreground">
                     {formatDate(context.createdAt)}
                   </p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(context.id, context.name);
+                    }}
+                    disabled={deletingId === context.id}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-red-500 hover:text-red-600 disabled:opacity-50"
+                    aria-label="Delete content"
+                  >
+                    {deletingId === context.id ? (
+                      <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
             </div>

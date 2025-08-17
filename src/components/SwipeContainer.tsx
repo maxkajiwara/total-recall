@@ -1,7 +1,7 @@
 "use client";
 
-import { motion, useMotionValue, type PanInfo } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { motion, useMotionValue, type PanInfo, animate } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { PageIndicator } from "./PageIndicator";
 import { useSwipeNavigation } from "~/hooks/useSwipeNavigation";
 
@@ -22,23 +22,51 @@ export function SwipeContainer({ children }: SwipeContainerProps) {
   } = useSwipeNavigation();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 390);
+  
+  // Initialize x with the starting position (Review screen is at index 1)
+  const x = useMotionValue(typeof window !== 'undefined' ? -window.innerWidth : -390);
 
-  // Snap to screen positions
+  // Update screen width on mount and resize
   useEffect(() => {
-    if (isInitialized && typeof window !== "undefined") {
-      const targetX = -currentScreenIndex * window.innerWidth;
-      x.set(targetX);
+    const updateScreenWidth = () => {
+      setScreenWidth(window.innerWidth);
+    };
+    
+    updateScreenWidth();
+    window.addEventListener('resize', updateScreenWidth);
+    
+    return () => window.removeEventListener('resize', updateScreenWidth);
+  }, []);
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDrag = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    // Update x position smoothly during drag
+    const baseX = -currentScreenIndex * screenWidth;
+    let newX = baseX + info.offset.x;
+    
+    // Apply rubber band effect at boundaries
+    if (!canGoPrevious && info.offset.x > 0) {
+      // At first screen, dragging right
+      newX = baseX + info.offset.x * 0.3;
+    } else if (!canGoNext && info.offset.x < 0) {
+      // At last screen, dragging left
+      newX = baseX + info.offset.x * 0.3;
     }
-  }, [currentScreenIndex, x, isInitialized]);
+    
+    x.set(newX);
+  };
 
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (typeof window === "undefined") return;
+    setIsDragging(false);
     
     const { offset, velocity } = info;
-    const screenWidth = window.innerWidth;
-    const swipeThreshold = screenWidth * 0.2; // 20% of screen width
-    const velocityThreshold = 500;
+    const swipeThreshold = screenWidth * 0.15;
+    const velocityThreshold = 300;
 
     // Determine direction based on offset and velocity
     const shouldSwipeNext = 
@@ -46,45 +74,30 @@ export function SwipeContainer({ children }: SwipeContainerProps) {
     const shouldSwipePrevious = 
       (offset.x > swipeThreshold || velocity.x > velocityThreshold) && canGoPrevious;
 
+    let targetIndex = currentScreenIndex;
+    
     if (shouldSwipeNext) {
+      targetIndex = currentScreenIndex + 1;
       goToNext();
     } else if (shouldSwipePrevious) {
+      targetIndex = currentScreenIndex - 1;
       goToPrevious();
-    } else {
-      // Snap back to current screen
-      const targetX = -currentScreenIndex * screenWidth;
-      x.set(targetX);
-    }
-  };
-
-  const handleDrag = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const screenWidth = window?.innerWidth ?? 390;
-    const basePosition = -currentScreenIndex * screenWidth;
-    const newX = basePosition + info.offset.x;
-    
-    // Apply rubber band effect at edges
-    const minX = -(screens.length - 1) * screenWidth;
-    const maxX = 0;
-    
-    let constrainedX = newX;
-    
-    if (newX > maxX) {
-      // Rubber band on the left edge
-      const overflow = newX - maxX;
-      constrainedX = maxX + overflow * 0.3;
-    } else if (newX < minX) {
-      // Rubber band on the right edge
-      const overflow = minX - newX;
-      constrainedX = minX - overflow * 0.3;
     }
     
-    x.set(constrainedX);
+    // Animate to final position
+    const finalX = -targetIndex * screenWidth;
+    animate(x, finalX, {
+      type: "spring",
+      stiffness: 500,
+      damping: 35,
+      mass: 0.5,
+    });
   };
 
-  if (!isInitialized) {
+  if (!isInitialized || screenWidth === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-secondary">Loading...</div>
+        <div className="text-secondary animate-pulse">Loading...</div>
       </div>
     );
   }
@@ -92,43 +105,52 @@ export function SwipeContainer({ children }: SwipeContainerProps) {
   return (
     <div className="relative min-h-screen bg-background overflow-hidden">
       {/* Main swipe container */}
-      <div ref={containerRef} className="h-screen overflow-hidden">
+      <div ref={containerRef} className="h-screen overflow-hidden relative">
         <motion.div
-          className="flex h-full"
-          style={{ x }}
+          className="flex h-full will-change-transform"
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.1}
+          dragElastic={0}
+          dragMomentum={false}
+          onDragStart={handleDragStart}
           onDrag={handleDrag}
           onDragEnd={handleDragEnd}
-          animate={{
-            x: -currentScreenIndex * (window?.innerWidth ?? 390),
-          }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 30,
-            mass: 1,
+          style={{
+            x,
+            cursor: isDragging ? 'grabbing' : 'grab',
           }}
         >
           {children.map((child, index) => (
             <div
               key={index}
               className="min-w-full h-full flex-shrink-0"
-              style={{ width: '100vw' }}
+              style={{ 
+                width: `${screenWidth}px`,
+                // Optimize rendering performance
+                transform: 'translateZ(0)',
+                backfaceVisibility: 'hidden',
+              }}
             >
-              {child}
+              <div className="h-full w-full">
+                {child}
+              </div>
             </div>
           ))}
         </motion.div>
       </div>
 
-      {/* Page indicator */}
-      <PageIndicator
-        screens={screens}
-        currentScreenIndex={currentScreenIndex}
-        onScreenSelect={goToScreen}
-      />
+      {/* Page indicator with smooth fade */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <PageIndicator
+          screens={screens}
+          currentScreenIndex={currentScreenIndex}
+          onScreenSelect={goToScreen}
+        />
+      </motion.div>
     </div>
   );
 }
