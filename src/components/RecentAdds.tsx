@@ -175,7 +175,7 @@ export function RecentAdds() {
                       handleDelete(context.id, context.name);
                     }}
                     disabled={deletingId === context.id}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-red-500 hover:text-red-600 disabled:opacity-50"
+                    className="transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-red-500 hover:text-red-600 disabled:opacity-50"
                     aria-label="Delete content"
                   >
                     {deletingId === context.id ? (

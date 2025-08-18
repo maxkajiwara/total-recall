@@ -10,12 +10,10 @@ export const createQueryClient = () =>
       queries: {
         // Keep data fresh for 5 minutes to prevent unnecessary refetches during navigation
         staleTime: 5 * 60 * 1000, // 5 minutes
-        // Keep data in cache for 10 minutes
-        cacheTime: 10 * 60 * 1000, // 10 minutes  
+        // Keep data in cache for 10 minutes (gcTime is the new name for cacheTime)
+        gcTime: 10 * 60 * 1000, // 10 minutes  
         // Don't refetch on window focus for smoother UX
         refetchOnWindowFocus: false,
-        // Keep previous data while fetching new data
-        keepPreviousData: true,
         // Retry failed requests once
         retry: 1,
       },
