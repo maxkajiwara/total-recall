@@ -1,17 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
-
-interface Question {
-  id: string;
-  context: string;
-  question: string;
-  correctAnswer: string;
-  explanation?: string;
-}
+import { api } from '~/trpc/react';
+import { toast } from 'sonner';
 
 interface DesktopReviewSessionProps {
   isOpen: boolean;
@@ -20,7 +14,18 @@ interface DesktopReviewSessionProps {
   selectedContextIds?: number[];
 }
 
-type ReviewState = 'question' | 'correct' | 'incorrect' | 'showing-answer' | 'complete';
+type ReviewState = 'question' | 'evaluating' | 'feedback' | 'complete';
+
+interface ReviewResult {
+  questionId: number;
+  question: string;
+  userAnswer: string;
+  correctAnswer: string;
+  score: number;
+  feedback: string;
+  skipped: boolean;
+  timeSpent: number;
+}
 
 export default function DesktopReviewSession({ 
   isOpen,
@@ -31,37 +36,97 @@ export default function DesktopReviewSession({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [reviewState, setReviewState] = useState<ReviewState>('question');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<ReviewResult[]>([]);
+  const [currentFeedback, setCurrentFeedback] = useState<{ score: number; feedback: string } | null>(null);
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [showAnswer, setShowAnswer] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Mock questions data
-  const questions: Question[] = [
+  // Fetch real questions
+  const { data: questions = [], isLoading, refetch } = api.question.getDue.useQuery(
     {
-      id: '1',
-      context: 'Biology › Photosynthesis',
-      question: 'What is the primary function of chlorophyll in the photosynthesis process?',
-      correctAnswer: 'Chlorophyll absorbs light energy (mainly red and blue wavelengths) and converts it into chemical energy in the form of ATP and NADPH, which are used in the Calvin cycle to produce glucose.',
-      explanation: 'Specificity about energy conversion (light → chemical) and the molecules involved (ATP, NADPH) demonstrates deeper understanding.'
+      limit: 100,
+      contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined
     },
     {
-      id: '2',
-      context: 'Spanish › Travel Phrases',
-      question: '¿Cómo se dice "Where is the bathroom?" en español?',
-      correctAnswer: '¿Dónde está el baño?',
-      explanation: 'Remember to use "¿Dónde está...?" for asking locations and "el baño" is the most common term for bathroom in Spanish.'
-    },
-    {
-      id: '3',
-      context: 'Physics › Quantum Mechanics',
-      question: 'What is quantum entanglement?',
-      correctAnswer: 'Quantum entanglement is a quantum mechanical phenomenon where pairs or groups of particles interact in ways such that the quantum state of each particle cannot be described independently, even when separated by large distances.',
-      explanation: 'The key is that measuring one particle instantly affects its entangled partner, regardless of the distance between them.'
+      enabled: isOpen
     }
-  ];
+  );
 
+  // Evaluate answer mutation - using evaluateTextAnswer for text-based answers
+  const evaluateAnswer = api.question.evaluateTextAnswer.useMutation({
+    onSuccess: (data) => {
+      const timeSpent = Date.now() - questionStartTime;
+      const result: ReviewResult = {
+        questionId: currentQuestion!.id,
+        question: currentQuestion!.question,
+        userAnswer,
+        correctAnswer: currentQuestion!.answer,
+        score: data.score,
+        feedback: data.feedback,
+        skipped: false,
+        timeSpent
+      };
+      setResults(prev => [...prev, result]);
+      setCurrentFeedback({ score: data.score, feedback: data.feedback });
+      setReviewState('feedback');
+    },
+    onError: (error) => {
+      toast.error(`Failed to evaluate answer: ${error.message}`);
+      setReviewState('question');
+    }
+  });
+
+  const utils = api.useUtils();
+  
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentQuestionIndex];
   const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
+
+  // Calculate stats for completion screen
+  const completionStats = useMemo(() => {
+    if (results.length === 0) return { correctCount: 0, accuracy: 0, avgTime: 0 };
+    
+    const correctCount = results.filter(r => r.score >= 3).length; // Good (3) or Easy (4)
+    const accuracy = Math.round((correctCount / results.length) * 100);
+    const totalTime = results.reduce((sum, r) => sum + r.timeSpent, 0);
+    const avgTime = Math.round(totalTime / results.length / 1000); // in seconds
+    
+    return { correctCount, accuracy, avgTime };
+  }, [results]);
+
+  // Get next due info
+  const { data: allQuestions = [] } = api.question.list.useQuery(undefined, {
+    enabled: reviewState === 'complete'
+  });
+
+  const nextDueInfo = useMemo(() => {
+    if (!allQuestions.length) return [];
+    
+    const now = new Date();
+    const upcoming = allQuestions
+      .filter(q => new Date(q.due) > now)
+      .sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime())
+      .slice(0, 3);
+    
+    return upcoming.map(q => {
+      const due = new Date(q.due);
+      const diff = due.getTime() - now.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const days = Math.floor(hours / 24);
+      
+      let timeStr = '';
+      if (days > 0) {
+        timeStr = days === 1 ? 'tomorrow' : `in ${days} days`;
+      } else if (hours > 0) {
+        timeStr = `in ${hours} hour${hours > 1 ? 's' : ''}`;
+      } else {
+        timeStr = 'in a few minutes';
+      }
+      
+      return timeStr;
+    });
+  }, [allQuestions]);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -70,15 +135,25 @@ export default function DesktopReviewSession({
       setUserAnswer('');
       setReviewState('question');
       setResults([]);
+      setCurrentFeedback(null);
+      setQuestionStartTime(Date.now());
+      refetch();
     }
-  }, [isOpen]);
+  }, [isOpen, refetch]);
 
   // Focus textarea when showing question
   useEffect(() => {
     if (isOpen && reviewState === 'question' && textareaRef.current) {
       textareaRef.current.focus();
     }
-  }, [isOpen, reviewState]);
+  }, [isOpen, reviewState, currentQuestionIndex]);
+
+  // Update start time when moving to new question
+  useEffect(() => {
+    if (reviewState === 'question') {
+      setQuestionStartTime(Date.now());
+    }
+  }, [currentQuestionIndex, reviewState]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -90,8 +165,10 @@ export default function DesktopReviewSession({
       } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
         if (reviewState === 'question' && userAnswer.trim()) {
           handleSubmit();
+        } else if (reviewState === 'feedback') {
+          handleNext();
         }
-      } else if (e.key === ' ' && reviewState !== 'question') {
+      } else if (e.key === ' ' && reviewState === 'feedback') {
         e.preventDefault();
         handleNext();
       } else if (e.key === 'ArrowRight' && reviewState === 'question') {
@@ -105,36 +182,12 @@ export default function DesktopReviewSession({
 
   const handleSubmit = () => {
     if (!userAnswer.trim() || !currentQuestion) return;
-
-    // Simple answer checking (in real app, this would be AI-powered)
-    const isCorrect = checkAnswer(userAnswer, currentQuestion.correctAnswer);
     
-    const result = {
+    setReviewState('evaluating');
+    evaluateAnswer.mutate({
       questionId: currentQuestion.id,
-      question: currentQuestion.question,
-      userAnswer,
-      correctAnswer: currentQuestion.correctAnswer,
-      isCorrect,
-      timeSpent: Date.now() // In real app, track actual time
-    };
-
-    setResults(prev => [...prev, result]);
-    setReviewState(isCorrect ? 'correct' : 'incorrect');
-  };
-
-  const checkAnswer = (userAnswer: string, correctAnswer: string) => {
-    // Simple similarity check - in real app use AI
-    const userWords = userAnswer.toLowerCase().split(/\s+/);
-    const correctWords = correctAnswer.toLowerCase().split(/\s+/);
-    
-    let matchCount = 0;
-    userWords.forEach(word => {
-      if (correctWords.some(cWord => cWord.includes(word) || word.includes(cWord))) {
-        matchCount++;
-      }
+      textAnswer: userAnswer.trim()
     });
-    
-    return matchCount / correctWords.length > 0.5; // 50% threshold
   };
 
   const handleNext = () => {
@@ -142,43 +195,93 @@ export default function DesktopReviewSession({
       setCurrentQuestionIndex(prev => prev + 1);
       setUserAnswer('');
       setReviewState('question');
+      setCurrentFeedback(null);
+      setShowAnswer(false); // Reset show answer state
     } else {
       setReviewState('complete');
     }
   };
 
   const handleSkip = () => {
-    const result = {
+    if (!currentQuestion) return;
+    
+    const timeSpent = Date.now() - questionStartTime;
+    const result: ReviewResult = {
       questionId: currentQuestion.id,
       question: currentQuestion.question,
       userAnswer: '',
-      correctAnswer: currentQuestion.correctAnswer,
-      isCorrect: false,
+      correctAnswer: currentQuestion.answer,
+      score: 1, // "Again" rating for skipped
+      feedback: 'Question skipped',
       skipped: true,
-      timeSpent: Date.now()
+      timeSpent
     };
 
     setResults(prev => [...prev, result]);
     handleNext();
   };
 
-  const showCorrectAnswer = () => {
-    setReviewState('showing-answer');
-  };
-
   const handleComplete = () => {
+    // Invalidate queries to refresh data
+    utils.question.getDue.invalidate();
+    utils.question.list.invalidate();
+    
     onComplete({
-      totalQuestions,
+      totalQuestions: results.length,
       results,
-      correctCount: results.filter(r => r.isCorrect).length,
-      skippedCount: results.filter(r => r.skipped).length
+      correctCount: completionStats.correctCount,
+      accuracy: completionStats.accuracy,
+      avgTime: completionStats.avgTime
     });
   };
 
   if (!isOpen) return null;
 
-  const correctCount = results.filter(r => r.isCorrect).length;
-  const accuracy = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+  // Loading state
+  if (isLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      >
+        <div className="bg-white rounded-2xl p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading questions...</p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // No questions available
+  if (questions.length === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+        onClick={onExit}
+      >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-2xl p-8 text-center max-w-md"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-6xl mb-4">✨</div>
+          <h2 className="text-xl font-semibold mb-2">No Questions Due</h2>
+          <p className="text-muted-foreground mb-6">
+            {selectedContextIds.length > 0
+              ? 'No questions are due for review in the selected contexts.'
+              : 'Great work! You\'ve reviewed all your due cards.'}
+          </p>
+          <Button onClick={onExit} className="bg-primary hover:bg-primary/90 text-white">
+            Back to Dashboard
+          </Button>
+        </motion.div>
+      </motion.div>
+    );
+  }
 
   return (
     <AnimatePresence>
@@ -208,7 +311,7 @@ export default function DesktopReviewSession({
               </div>
 
               <p className="text-lg text-muted-foreground mb-6">
-                Great work! You've completed {totalQuestions} cards.
+                Great work! You've reviewed {results.length} card{results.length !== 1 ? 's' : ''}.
               </p>
 
               <div className="grid grid-cols-2 gap-8 mb-8 max-w-2xl mx-auto">
@@ -216,16 +319,18 @@ export default function DesktopReviewSession({
                   <h3 className="font-medium mb-4">Session Summary:</h3>
                   <div className="space-y-2 text-left">
                     <div className="flex justify-between">
-                      <span>Correct:</span>
-                      <span className="text-green-600 font-medium">{correctCount} cards ({accuracy}%)</span>
+                      <span>Accuracy:</span>
+                      <span className="font-medium">
+                        {completionStats.accuracy}% correct
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Incorrect:</span>
-                      <span className="text-red-600 font-medium">{totalQuestions - correctCount} cards ({100 - accuracy}%)</span>
+                      <span>Cards reviewed:</span>
+                      <span className="font-medium">{results.length}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Time spent:</span>
-                      <span>8 minutes</span>
+                      <span>Avg. time per card:</span>
+                      <span className="font-medium">{completionStats.avgTime}s</span>
                     </div>
                   </div>
                 </div>
@@ -233,9 +338,13 @@ export default function DesktopReviewSession({
                 <div>
                   <h3 className="font-medium mb-4">Next cards due:</h3>
                   <div className="space-y-2 text-left text-sm text-muted-foreground">
-                    <div>• 2 cards in 3 hours</div>
-                    <div>• 5 cards tomorrow</div>
-                    <div>• 8 cards in 3 days</div>
+                    {nextDueInfo.length > 0 ? (
+                      nextDueInfo.map((time, i) => (
+                        <div key={i}>• Cards due {time}</div>
+                      ))
+                    ) : (
+                      <div>No upcoming reviews scheduled</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -243,9 +352,6 @@ export default function DesktopReviewSession({
               <div className="flex justify-center space-x-4">
                 <Button onClick={handleComplete} className="bg-primary hover:bg-primary/90 text-white">
                   Back to Home
-                </Button>
-                <Button>
-                  Review Mistakes
                 </Button>
               </div>
             </div>
@@ -263,11 +369,11 @@ export default function DesktopReviewSession({
                 <div className="flex items-center space-x-4">
                   <div className="text-sm text-muted-foreground">{Math.round(progress)}%</div>
                   {reviewState === 'question' && (
-                    <Button size="sm" onClick={handleSkip}>
-                      Skip
+                    <Button size="sm" variant="ghost" onClick={handleSkip}>
+                      Skip →
                     </Button>
                   )}
-                  <Button size="sm" onClick={onExit}>
+                  <Button size="sm" variant="ghost" onClick={onExit}>
                     Exit
                   </Button>
                 </div>
@@ -279,7 +385,6 @@ export default function DesktopReviewSession({
                   <motion.div 
                     className="h-full bg-primary transition-all duration-500"
                     animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.5 }}
                   />
                 </div>
               </div>
@@ -287,8 +392,7 @@ export default function DesktopReviewSession({
               {/* Content */}
               <div className="flex-1 overflow-y-auto p-6">
                 <AnimatePresence mode="wait">
-                  {/* Question State */}
-                  {reviewState === 'question' && (
+                  {reviewState === 'question' && currentQuestion && (
                     <motion.div
                       key="question"
                       initial={{ opacity: 0, y: 20 }}
@@ -297,176 +401,146 @@ export default function DesktopReviewSession({
                       className="space-y-6"
                     >
                       <div>
-                        <div className="text-sm text-muted-foreground mb-2">{currentQuestion.context}</div>
-                        <h2 className="text-xl leading-relaxed">{currentQuestion.question}</h2>
+                        <div className="text-sm text-muted-foreground mb-2">
+                          {currentQuestion.context?.name || 'General'}
+                        </div>
+                        <h2 className="text-2xl font-medium">
+                          {currentQuestion.question}
+                        </h2>
                       </div>
 
-                      <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Your answer:
+                        </label>
                         <Textarea
                           ref={textareaRef}
                           value={userAnswer}
                           onChange={(e) => setUserAnswer(e.target.value)}
                           placeholder="Type your answer here..."
-                          className="min-h-32 text-base"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                              e.preventDefault();
-                              if (userAnswer.trim()) handleSubmit();
-                            }
-                          }}
+                          className="min-h-32 resize-none"
+                          disabled={reviewState === 'evaluating'}
                         />
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Press Cmd+Enter (Mac) or Ctrl+Enter (PC) to submit
+                        </p>
+                      </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-gray-400">
-                            Keyboard: <kbd className="px-2 py-1 bg-gray-50 rounded">⌘↵</kbd> to submit, 
-                            <kbd className="px-2 py-1 bg-gray-50 rounded ml-1">→</kbd> to skip
-                          </div>
+                      <div className="flex justify-end space-x-3">
+                        <Button
+                          onClick={handleSubmit}
+                          disabled={!userAnswer.trim() || reviewState === 'evaluating'}
+                          className="bg-primary hover:bg-primary/90 text-white min-w-32"
+                        >
+                          {reviewState === 'evaluating' ? (
+                            <motion.div className="flex items-center space-x-2">
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                              />
+                              <span>Evaluating...</span>
+                            </motion.div>
+                          ) : (
+                            'Submit Answer'
+                          )}
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {reviewState === 'feedback' && currentQuestion && currentFeedback && (
+                    <motion.div
+                      key="feedback"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="space-y-6"
+                    >
+                      <div>
+                        <h2 className="text-2xl font-medium mb-4">
+                          {currentQuestion.question}
+                        </h2>
+                      </div>
+
+                      {/* Score indicator */}
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">
+                          {currentFeedback.score >= 3 ? '✅' : '❌'}
+                        </span>
+                        <span className={`font-medium ${
+                          currentFeedback.score >= 3 ? 'text-green-600' : 'text-orange-600'
+                        }`}>
+                          {currentFeedback.score === 4 ? 'Perfect!' :
+                           currentFeedback.score === 3 ? 'Good!' :
+                           currentFeedback.score === 2 ? 'Needs work' :
+                           'Try again'}
+                        </span>
+                      </div>
+
+                      {/* Your answer */}
+                      <div>
+                        <h3 className="font-medium mb-2">Your answer:</h3>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          {userAnswer}
+                        </div>
+                      </div>
+
+                      {/* Show/Hide Answer Button and Answer */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium">Expected answer:</h3>
                           <Button
-                            onClick={handleSubmit}
-                            disabled={!userAnswer.trim()}
-                            className="bg-primary hover:bg-primary/90 text-white"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setShowAnswer(!showAnswer)}
+                            className="text-sm"
                           >
-                            Submit
+                            {showAnswer ? 'Hide Answer' : 'Show Answer'}
                           </Button>
                         </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Correct Answer State */}
-                  {reviewState === 'correct' && (
-                    <motion.div
-                      key="correct"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white">
-                          ✓
-                        </div>
-                        <h2 className="text-xl font-semibold text-green-600">Correct!</h2>
-                      </div>
-
-                      <div className="space-y-4">
-                        <p className="text-muted-foreground">
-                          Excellent! You correctly identified the key concepts. 
-                          {currentQuestion.explanation && (
-                            <span className="block mt-2">{currentQuestion.explanation}</span>
-                          )}
-                        </p>
-                        <div className="text-sm text-muted-foreground">
-                          Next review: <strong>In 4 days</strong>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-400">
-                          Press <kbd className="px-2 py-1 bg-gray-50 rounded">Space</kbd> to continue
-                        </div>
-                        <Button onClick={handleNext} className="bg-primary hover:bg-primary/90 text-white">
-                          Continue →
-                        </Button>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Incorrect Answer State */}
-                  {reviewState === 'incorrect' && (
-                    <motion.div
-                      key="incorrect"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-yellow-600 rounded-full flex items-center justify-center text-white">
-                          ⚠️
-                        </div>
-                        <h2 className="text-xl font-semibold text-yellow-600">Not quite right</h2>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="font-medium mb-2">Your answer:</h3>
-                          <div className="p-3 bg-gray-50 rounded-lg text-muted-foreground">
-                            "{userAnswer}"
+                        {showAnswer ? (
+                          <div className="p-3 bg-green-50 rounded-lg text-green-900">
+                            {currentQuestion.answer}
                           </div>
-                        </div>
-                        
-                        <div>
-                          <h3 className="font-medium mb-2">Why it's incomplete:</h3>
-                          <p className="text-muted-foreground">
-                            {currentQuestion.explanation || 
-                             "Your answer touched on some concepts but missed key details that demonstrate complete understanding."
-                            }
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <Button onClick={showCorrectAnswer}>
-                          View Correct Answer
-                        </Button>
-                        <div className="text-sm text-muted-foreground">
-                          Next review: <strong>Tomorrow</strong>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Showing Correct Answer State */}
-                  {reviewState === 'showing-answer' && (
-                    <motion.div
-                      key="showing-answer"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="space-y-6"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-yellow-600 rounded-full flex items-center justify-center text-white">
-                          ⚠️
-                        </div>
-                        <h2 className="text-xl font-semibold text-yellow-600">Not quite right</h2>
-                      </div>
-
-                      <div className="space-y-6">
-                        <div>
-                          <h3 className="font-medium mb-2">Your answer:</h3>
-                          <div className="p-3 bg-gray-50 rounded-lg text-muted-foreground">
-                            "{userAnswer}"
+                        ) : (
+                          <div className="p-3 bg-gray-50 rounded-lg text-gray-400 italic">
+                            Click "Show Answer" to reveal the expected answer
                           </div>
-                        </div>
-                        
-                        <div>
-                          <h3 className="font-medium mb-2">Correct answer:</h3>
-                          <div className="p-4 bg-green-600/10 border border-green-600/20 rounded-lg">
-                            {currentQuestion.correctAnswer}
-                          </div>
-                        </div>
+                        )}
+                      </div>
 
-                        <div>
-                          <h3 className="font-medium mb-2">Why the difference matters:</h3>
-                          <p className="text-muted-foreground">
-                            {currentQuestion.explanation}
-                          </p>
+                      {/* AI Feedback */}
+                      <div>
+                        <h3 className="font-medium mb-2">Feedback:</h3>
+                        <div className={`p-3 rounded-lg ${
+                          currentFeedback.score >= 3 
+                            ? 'bg-green-50 text-green-900' 
+                            : 'bg-red-50 text-red-900'
+                        }`}>
+                          {currentFeedback.feedback}
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-400">
-                          Press <kbd className="px-2 py-1 bg-gray-50 rounded">Space</kbd> to continue
-                        </div>
-                        <Button onClick={handleNext} className="bg-primary hover:bg-primary/90 text-white">
-                          Continue →
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleNext}
+                          className="bg-primary hover:bg-primary/90 text-white"
+                        >
+                          {currentQuestionIndex < totalQuestions - 1 ? 'Next Question →' : 'Finish Review'}
                         </Button>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
+              </div>
+
+              {/* Keyboard shortcuts hint */}
+              <div className="px-6 py-3 border-t border-gray-100 bg-gray-50">
+                <p className="text-xs text-muted-foreground text-center">
+                  <span className="font-medium">Shortcuts:</span> 
+                  {' '}Cmd/Ctrl+Enter to submit • Right Arrow to skip • Esc to exit
+                </p>
               </div>
             </div>
           )}

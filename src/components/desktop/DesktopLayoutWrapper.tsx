@@ -29,17 +29,6 @@ export default function DesktopLayoutWrapper() {
   const currentStreak = 7; // TODO: Calculate from actual data
 
   const utils = api.useUtils();
-  const createContext = api.context.create.useMutation({
-    onSuccess: () => {
-      toast.success('Context created successfully!');
-      utils.context.list.invalidate();
-      utils.question.getDue.invalidate();
-      setIsAddContextModalOpen(false);
-    },
-    onError: (error) => {
-      toast.error(`Failed to create context: ${error.message}`);
-    }
-  });
 
   const handleStartReview = () => {
     setSelectedContextIds([]);
@@ -60,18 +49,11 @@ export default function DesktopLayoutWrapper() {
     setIsAddContextModalOpen(true);
   };
 
-  const handleAddContextSubmit = (data: { name: string; type: 'url' | 'text'; content: string }) => {
-    if (data.type === 'url') {
-      createContext.mutate({
-        name: data.name,
-        url: data.content,
-      });
-    } else {
-      createContext.mutate({
-        name: data.name,
-        text: data.content,
-      });
-    }
+  const handleAddContextSuccess = () => {
+    // Modal handles its own closing, but we can do additional logic here if needed
+    utils.context.list.invalidate();
+    utils.question.getDue.invalidate();
+    utils.question.list.invalidate();
   };
 
   const handleReviewContext = (contextId: string) => {
@@ -135,7 +117,7 @@ export default function DesktopLayoutWrapper() {
       <AddContextModal
         isOpen={isAddContextModalOpen}
         onClose={() => setIsAddContextModalOpen(false)}
-        onSubmit={handleAddContextSubmit}
+        onSuccess={handleAddContextSuccess}
       />
 
       <FilterReviewModal
