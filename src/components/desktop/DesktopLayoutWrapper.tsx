@@ -117,7 +117,7 @@ export default function DesktopLayoutWrapper() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-warm">
+    <div className="h-screen flex flex-col bg-background">
       {/* Top Navigation */}
       <DesktopNavigation
         currentView={currentView}

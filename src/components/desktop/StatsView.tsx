@@ -59,7 +59,7 @@ export default function StatsView() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="card-custom p-6 text-center"
+                className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 text-center"
               >
                 <div className="text-3xl mb-3">{stat.icon}</div>
                 <div className="text-2xl font-semibold mb-1">{stat.value}</div>
@@ -70,7 +70,7 @@ export default function StatsView() {
         </div>
 
         {/* Daily Reviews Chart */}
-        <div className="card-custom p-6">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
           <h2 className="font-semibold mb-4">Daily Reviews</h2>
           <div className="h-64 flex items-end justify-center space-x-2">
             {/* Mock chart bars */}
@@ -95,7 +95,7 @@ export default function StatsView() {
         </div>
 
         {/* Performance by Context */}
-        <div className="card-custom p-6">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
           <h2 className="font-semibold mb-6">Performance by Context</h2>
           <div className="space-y-4">
             {performanceData.map((item, index) => (
@@ -125,7 +125,7 @@ export default function StatsView() {
 
         {/* Additional Insights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="card-custom p-6">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
             <h3 className="font-semibold mb-4">Study Patterns</h3>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
@@ -143,7 +143,7 @@ export default function StatsView() {
             </div>
           </div>
 
-          <div className="card-custom p-6">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
             <h3 className="font-semibold mb-4">Achievements</h3>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">

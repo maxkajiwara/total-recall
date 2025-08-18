@@ -99,8 +99,8 @@ export default function LibraryViewWrapper({ onAddContext, onReviewContext }: Li
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-custom mx-auto mb-4"></div>
-          <p className="text-secondary">Loading your library...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your library...</p>
         </div>
       </div>
     );
@@ -116,14 +116,14 @@ export default function LibraryViewWrapper({ onAddContext, onReviewContext }: Li
         {/* Header */}
         <div>
           <h1 className="text-2xl font-semibold mb-2">My Learning Library</h1>
-          <p className="text-secondary">Manage your learning contexts and flashcards</p>
+          <p className="text-muted-foreground">Manage your learning contexts and flashcards</p>
         </div>
 
         {/* Controls */}
         <div className="flex items-center justify-between gap-4">
           <Button 
             onClick={onAddContext}
-            className="bg-primary-custom hover:bg-primary-hover text-white"
+            className="bg-primary hover:bg-primary/90 text-white"
           >
             + Add Context
           </Button>
@@ -139,31 +139,31 @@ export default function LibraryViewWrapper({ onAddContext, onReviewContext }: Li
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-sm text-secondary">Sort:</span>
+              <span className="text-sm text-muted-foreground">Sort:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="text-sm border border-custom rounded-lg px-3 py-2 bg-surface focus:border-primary-custom focus:outline-none"
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:border-primary focus:outline-none cursor-pointer"
               >
-                <option value="due">Due ▼</option>
-                <option value="name">Name ▼</option>
-                <option value="retention">Retention ▼</option>
+                <option value="due">Due</option>
+                <option value="name">Name</option>
+                <option value="retention">Retention</option>
               </select>
             </div>
           </div>
         </div>
 
         {/* Context Table */}
-        <div className="card-custom overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-subtle">
-                  <th className="text-left py-4 px-6 font-medium text-secondary">Name</th>
-                  <th className="text-left py-4 px-4 font-medium text-secondary">Questions</th>
-                  <th className="text-left py-4 px-4 font-medium text-secondary">Due</th>
-                  <th className="text-left py-4 px-4 font-medium text-secondary">Retention</th>
-                  <th className="text-right py-4 px-6 font-medium text-secondary">Actions</th>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-4 px-6 font-medium text-muted-foreground">Name</th>
+                  <th className="text-left py-4 px-4 font-medium text-muted-foreground">Questions</th>
+                  <th className="text-left py-4 px-4 font-medium text-muted-foreground">Due</th>
+                  <th className="text-left py-4 px-4 font-medium text-muted-foreground">Retention</th>
+                  <th className="text-right py-4 px-6 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,14 +173,14 @@ export default function LibraryViewWrapper({ onAddContext, onReviewContext }: Li
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="border-b border-subtle hover:bg-surface-hover transition-colors"
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                   >
                     <td className="py-4 px-6">
                       <div className="flex items-start space-x-3">
                         <span className="text-2xl">{context.emoji}</span>
                         <div>
                           <div className="font-medium text-lg">{context.name}</div>
-                          <div className="text-sm text-secondary mt-1">
+                          <div className="text-sm text-muted-foreground mt-1">
                             {context.description}
                           </div>
                         </div>
@@ -191,18 +191,18 @@ export default function LibraryViewWrapper({ onAddContext, onReviewContext }: Li
                     </td>
                     <td className="py-4 px-4">
                       {context.dueCards > 0 ? (
-                        <span className="bg-primary-custom text-white px-2 py-1 rounded-full text-sm font-medium">
+                        <span className="bg-primary text-white px-2 py-1 rounded-full text-sm font-medium">
                           {context.dueCards}
                         </span>
                       ) : (
-                        <span className="text-tertiary">0</span>
+                        <span className="text-gray-400">0</span>
                       )}
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-2">
-                        <div className="w-16 h-2 bg-border-subtle rounded-full overflow-hidden">
+                        <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div 
-                            className="h-full bg-success rounded-full"
+                            className="h-full bg-green-600 rounded-full"
                             style={{ width: `${context.retentionRate}%` }}
                           />
                         </div>
@@ -215,7 +215,7 @@ export default function LibraryViewWrapper({ onAddContext, onReviewContext }: Li
                           <Button
                             size="sm"
                             onClick={() => onReviewContext(context.id)}
-                            className="bg-primary-custom hover:bg-primary-hover text-white text-xs"
+                            className="bg-primary hover:bg-primary/90 text-white text-xs"
                           >
                             Review
                           </Button>
@@ -224,7 +224,7 @@ export default function LibraryViewWrapper({ onAddContext, onReviewContext }: Li
                           variant="ghost"
                           size="sm"
                           onClick={() => handleContextAction(context.id, 'delete')}
-                          className="p-2 text-error hover:bg-red-50"
+                          className="p-2 text-red-600 hover:bg-red-50"
                         >
                           🗑️
                         </Button>
@@ -240,7 +240,7 @@ export default function LibraryViewWrapper({ onAddContext, onReviewContext }: Li
         {sortedContexts.length === 0 && (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">🔍</div>
-            <p className="text-secondary">
+            <p className="text-muted-foreground">
               {searchQuery ? 'No contexts found matching your search.' : 'No contexts yet. Add your first one!'}
             </p>
           </div>
