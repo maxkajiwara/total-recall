@@ -19,7 +19,6 @@ This is a mobile-first T3 Stack application with a beautiful swipe-based interfa
 - **Smart Review System**: Full-screen immersive review experience with AI-powered answer evaluation
 - **FSRS Spaced Repetition**: Scientific spaced repetition algorithm via ts-fsrs library for optimized learning schedules
 - **Question Management System**: Full CRUD for flashcard questions with FSRS state tracking (due dates, stability, difficulty, etc.)
-- **MCP Server**: APIs exposed via Model Context Protocol for AI assistant integration (Claude Desktop, etc.)
 - **Type-safe APIs**: Full-stack type safety through tRPC with automatic client generation
 
 ## Development Commands
@@ -44,12 +43,6 @@ This is a mobile-first T3 Stack application with a beautiful swipe-based interfa
 - `npm run db:migrate` - Run database migrations
 - `npm run db:push` - Push schema changes directly to database
 - `npm run db:studio` - Open Prisma Studio for database inspection
-
-## MCP Server Commands
-
-- `npm run mcp:dev` - Run standalone MCP server (stdio transport, requires local repo)
-- `npm run mcp:build` - Build MCP server
-- `npm run mcp:start` - Run built MCP server
 
 ## Architecture
 
@@ -90,24 +83,6 @@ This is a mobile-first T3 Stack application with a beautiful swipe-based interfa
 - **Rating System**: 1=Again, 2=Hard, 3=Good, 4=Easy
 - **Optimization**: 20-30% fewer reviews compared to traditional algorithms
 
-### MCP Server Layer
-- **Standalone Server**: `src/mcp/server.ts` - Direct stdio transport for local use
-- **HTTP API Route**: `src/app/api/mcp/[transport]/route.ts` - Production-ready HTTP transport using mcp-handler
-- **Available Tools**:
-  - **Context Tools**:
-    - `context_create` - Create new context with URL or text
-    - `context_update` - Update existing context
-    - `context_get` - Get context by ID
-    - `context_list` - List all contexts
-    - `context_delete` - Delete context by ID
-  - **Question Tools**:
-    - `question_create` - Create question linked to context
-    - `question_list` - List questions with optional context filter
-    - `question_listByContext` - List questions for specific context
-    - `question_review` - Process review with FSRS rating
-    - `question_getDue` - Get questions due for review
-    - `question_delete` - Delete question by ID
-
 ### Frontend Layer
 - **Framework**: Next.js 15 with App Router
 - **State Management**: TanStack Query via tRPC React integration
@@ -135,8 +110,6 @@ This is a mobile-first T3 Stack application with a beautiful swipe-based interfa
 - `prisma/schema.prisma` - Database schema definitions
 - `src/server/db/index.ts` - Prisma client instance
 - `src/env.js` - Environment variable validation
-- `src/mcp/server.ts` - Standalone MCP server implementation
-- `src/app/api/mcp/[transport]/route.ts` - HTTP MCP server endpoint
 
 ### AI & Integration Services
 - `src/lib/exa.ts` - EXA API integration utilities
@@ -166,35 +139,6 @@ This is a mobile-first T3 Stack application with a beautiful swipe-based interfa
 - `src/hooks/useAddContent.ts` - Content creation and submission logic
 - `src/hooks/useReviewData.ts` - Review statistics and due cards calculation
 
-## MCP Configuration
-
-### For Local Development (stdio transport):
-```json
-{
-  "mcpServers": {
-    "total-recall": {
-      "command": "npm",
-      "args": ["run", "mcp:dev"],
-      "cwd": "/path/to/total-recall-hack"
-    }
-  }
-}
-```
-
-### For Production/Remote (HTTP transport):
-```json
-{
-  "mcpServers": {
-    "total-recall": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:3000/api/mcp/mcp"]
-    }
-  }
-}
-```
-
-Replace `localhost:3000` with your production URL when deployed.
-
 ## Development Notes
 
 - The project uses TypeScript in strict mode
@@ -205,8 +149,6 @@ Replace `localhost:3000` with your production URL when deployed.
 - Context XOR validation ensures data integrity (either URL or text, never both)
 - EXA integration provides automatic content extraction for URLs
 - AI question generation happens automatically on context create/update (deletes old questions on update)
-- MCP server can be deployed independently or as part of the Next.js app
-- MCP tools use inline Zod schemas for proper input validation and exposure
 
 ## AI Features
 
