@@ -294,21 +294,30 @@ export const questionRouter = createTRPCRouter({
     .meta({ 
       openapi: { 
         enabled: true, 
-        description: "Get questions that are due for review" 
+        description: "Get questions that are due for review, optionally filtered by context(s)" 
       } 
     })
     .input(
       z.object({
         contextId: z.number().int().positive("Context ID must be a positive integer").optional(),
+        contextIds: z.array(z.number().int().positive()).optional(),
         limit: z.number().int().positive().max(100).default(20),
       }).optional(),
     )
     .query(async ({ ctx, input }) => {
       const now = new Date();
-      const where = {
+      
+      // Build where clause based on input
+      let where: any = {
         due: { lte: now },
-        ...(input?.contextId && { contextId: input.contextId }),
       };
+      
+      // Support both single contextId and multiple contextIds
+      if (input?.contextIds && input.contextIds.length > 0) {
+        where.contextId = { in: input.contextIds };
+      } else if (input?.contextId) {
+        where.contextId = input.contextId;
+      }
       
       const dueQuestions = await ctx.db.question.findMany({
         where,
