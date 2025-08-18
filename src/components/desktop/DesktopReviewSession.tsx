@@ -392,7 +392,7 @@ export default function DesktopReviewSession({
               {/* Content */}
               <div className="flex-1 overflow-y-auto p-6">
                 <AnimatePresence mode="wait">
-                  {reviewState === 'question' && currentQuestion && (
+                  {(reviewState === 'question' || reviewState === 'evaluating') && currentQuestion && (
                     <motion.div
                       key="question"
                       initial={{ opacity: 0, y: 20 }}
